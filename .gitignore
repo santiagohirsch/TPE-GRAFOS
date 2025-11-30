@@ -24,3 +24,8 @@ hs_err_pid*
 replay_pid*
 
 .idea
+target
+
+spark*/
+dependency-reduced-pom.xml
+graphframes-0.8.2-spark2.4-s_2.11.jar
