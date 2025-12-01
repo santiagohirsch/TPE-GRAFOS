@@ -127,6 +127,11 @@ public class KCore {
     }
 
     private boolean isValidGraph(Dataset<Row> edges) {
+        long distinctEdges = edges.distinct().count();
+        if (distinctEdges != edges.count()) {
+            return false;
+        }
+
         Dataset<Row> reversedEdges = edges.select(
                 edges.col(GRAPHFRAMES_DST_COL).alias(GRAPHFRAMES_SRC_COL),
                 edges.col(GRAPHFRAMES_SRC_COL).alias(GRAPHFRAMES_DST_COL)
