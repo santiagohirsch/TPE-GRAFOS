@@ -10,4 +10,11 @@ public class ErrorUtils {
     public static String PATH_MUST_NOT_BE_NULL = "Path must not be null.";
     public static String PATH_DOES_NOT_EXIST = "Path does not exist: ";
     public static String PATH_IS_NOT_A_FILE = "Path is not a file: ";
+
+    public static void throwError(String ...messages) {
+        for (String message : messages) {
+            System.err.println(message);
+        }
+        System.exit(1);
+    }
 }

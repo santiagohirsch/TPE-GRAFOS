@@ -40,11 +40,11 @@ public class SparkUtils {
         }
 
         if (!fs.exists(path)) {
-            throw new IOException(PATH_DOES_NOT_EXIST + path);
+            throwError(PATH_DOES_NOT_EXIST + path);
         }
 
         if (!fs.isFile(path)) {
-            throw new IOException(PATH_IS_NOT_A_FILE + path);
+            throwError(PATH_IS_NOT_A_FILE + path);
         }
     }
 

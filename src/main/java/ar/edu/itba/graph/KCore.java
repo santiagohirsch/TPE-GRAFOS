@@ -46,8 +46,7 @@ public class KCore {
 
         KCore kCore = new KCore();
         if (!kCore.isValidGraph(edgesDF)) {
-            System.err.println(UNDERLYING_STRUCTURE_NOT_VALID);
-            System.exit(1);
+            throwError(UNDERLYING_STRUCTURE_NOT_VALID);
         }
 
         Dataset<Row> reversed = edgesDF.select(
