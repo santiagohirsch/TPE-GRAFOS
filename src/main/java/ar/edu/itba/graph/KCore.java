@@ -15,6 +15,8 @@ import static ar.edu.itba.graph.utils.GraphFrameUtils.graphToString;
 import static ar.edu.itba.graph.utils.MainUtils.*;
 import static ar.edu.itba.graph.utils.SparkUtils.*;
 import static ar.edu.itba.graph.utils.VarsUtils.*;
+import static org.apache.spark.sql.functions.countDistinct;
+import static org.apache.spark.sql.functions.when;
 
 public class KCore {
 
@@ -85,20 +87,26 @@ public class KCore {
         do {
             Dataset<Row> edges = currentGraph.edges();
 
-            Dataset<Row> degrees = edges
-                    .select(edges.col(GRAPHFRAMES_SRC_COL).as(GRAPHFRAMES_ID_COL))
-                    .union(edges.select(edges.col(GRAPHFRAMES_DST_COL).as(GRAPHFRAMES_ID_COL)))
-                    .groupBy(GRAPHFRAMES_ID_COL)
-                    .count()
-                    .withColumnRenamed(COUNT, GRAPHFRAMES_DEGREE_COL);
+            Dataset<Row> undirectedEdges =
+                    edges.select(
+                            when(edges.col(GRAPHFRAMES_SRC_COL).lt(edges.col(GRAPHFRAMES_DST_COL)), edges.col(GRAPHFRAMES_SRC_COL)).otherwise(edges.col(GRAPHFRAMES_DST_COL)).alias(GRAPHFRAMES_SRC_COL),
+                            when(edges.col(GRAPHFRAMES_SRC_COL).lt(edges.col(GRAPHFRAMES_DST_COL)), edges.col(GRAPHFRAMES_DST_COL)).otherwise(edges.col(GRAPHFRAMES_SRC_COL)).alias(GRAPHFRAMES_DST_COL)
+                    ).distinct();
 
-            Dataset<Row> verticesNoDegree = currentGraph.vertices().drop(GRAPHFRAMES_DEGREE_COL);
+            Dataset<Row> neighbors =
+                    undirectedEdges.select(undirectedEdges.col(GRAPHFRAMES_SRC_COL).as(GRAPHFRAMES_ID_COL), undirectedEdges.col(GRAPHFRAMES_DST_COL).as(GRAPHFRAMES_NEIGHBOR_COL))
+                            .union(
+                                    undirectedEdges.select(undirectedEdges.col(GRAPHFRAMES_DST_COL).as(GRAPHFRAMES_ID_COL), undirectedEdges.col(GRAPHFRAMES_SRC_COL).as(GRAPHFRAMES_NEIGHBOR_COL))
+                            );
 
-            Dataset<Row> filteredVertices = verticesNoDegree
-                    .join(degrees, verticesNoDegree.col(GRAPHFRAMES_ID_COL).equalTo(degrees.col(GRAPHFRAMES_ID_COL)), INNER)
-                    .drop(degrees.col(GRAPHFRAMES_ID_COL))
+            Dataset<Row> degrees =
+                    neighbors.groupBy(GRAPHFRAMES_ID_COL)
+                            .agg(countDistinct(neighbors.col(GRAPHFRAMES_NEIGHBOR_COL)).alias(GRAPHFRAMES_DEGREE_COL));
+
+            Dataset<Row> filteredVertices = currentGraph.vertices()
+                    .join(degrees, GRAPHFRAMES_ID_COL)
                     .filter(degrees.col(GRAPHFRAMES_DEGREE_COL).geq(k))
-                    .select(verticesNoDegree.col(GRAPHFRAMES_ID_COL), verticesNoDegree.col(VERTICES_NAME_COL));
+                    .select(currentGraph.vertices().col(GRAPHFRAMES_ID_COL), currentGraph.vertices().col(VERTICES_NAME_COL));
 
             Dataset<Row> srcIds = filteredVertices.select(filteredVertices.col(GRAPHFRAMES_ID_COL).alias(GRAPHFRAMES_SRC_ALIAS));
             Dataset<Row> dstIds = filteredVertices.select(filteredVertices.col(GRAPHFRAMES_ID_COL).alias(GRAPHFRAMES_DST_ALIAS));
