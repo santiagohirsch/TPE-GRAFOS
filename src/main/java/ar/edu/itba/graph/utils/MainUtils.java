@@ -1,17 +1,17 @@
 package ar.edu.itba.graph.utils;
-
+import static ar.edu.itba.graph.utils.ErrorUtils.*;
 public class MainUtils {
 
     public static void validateArguments(String[] args) {
         if (args == null || args.length != 3) {
-            System.err.println("Invalid number of arguments.");
-            System.err.println("Usage: java -jar <program>.jar <path_to_nodes_csv> <path_to_edges_csv> <k_value>");
+            System.err.println(INVALID_NUMBER_OF_ARGUMENTS);
+            System.err.println(USAGE_MESSAGE);
             System.exit(1);
         }
 
         for (String arg : args) {
             if (arg == null || arg.trim().isEmpty()) {
-                System.err.println("Arguments must not be null or empty.");
+                System.err.println(ARGUMENTS_MUST_NOT_BE_NULL_OR_EMPTY);
                 System.exit(1);
             }
         }
@@ -19,11 +19,11 @@ public class MainUtils {
         try {
             Integer.parseInt(args[2]);
             if (Integer.parseInt(args[2]) < 0) {
-                System.err.println("The third argument (k value) must be a non-negative integer.");
+                System.err.println(K_VALUE_MUST_BE_NON_NEGATIVE_INTEGER);
                 System.exit(1);
             }
         } catch (NumberFormatException e) {
-            System.err.println("The third argument (k value) must be a valid integer.");
+            System.err.println(K_VALUE_MUST_BE_VALID_INTEGER);
             System.exit(1);
         }
     }
