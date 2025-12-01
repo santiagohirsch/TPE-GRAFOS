@@ -8,8 +8,10 @@ import org.graphframes.GraphFrame;
 import ar.edu.itba.graph.utils.SparkUtils;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Date;
 
+import static ar.edu.itba.graph.utils.ErrorUtils.*;
+import static ar.edu.itba.graph.utils.GraphFrameUtils.graphToString;
 import static ar.edu.itba.graph.utils.MainUtils.*;
 import static ar.edu.itba.graph.utils.SparkUtils.*;
 import static ar.edu.itba.graph.utils.VarsUtils.*;
@@ -44,7 +46,7 @@ public class KCore {
 
         KCore kCore = new KCore();
         if (!kCore.isValidGraph(edgesDF)) {
-            System.err.println("The underlying structure is not valid, it is a multigraph.");
+            System.err.println(UNDERLYING_STRUCTURE_NOT_VALID);
             System.exit(1);
         }
 
@@ -60,6 +62,20 @@ public class KCore {
 
         GraphFrame result = kCore.decomposition(graph, k);
 
+        Date now = new Date();
+        String timestamp = String.valueOf(now.getTime());
+
+        writeCSV(
+                graphToString(result.vertices().orderBy(GRAPHFRAMES_ID_COL).collectAsList(), result.vertexColumns()),
+                timestamp + VERTICES_EXTENSION,
+                conf
+        );
+        writeCSV(
+                graphToString(result.edges().orderBy(GRAPHFRAMES_SRC_COL, GRAPHFRAMES_DST_COL).collectAsList(), result.edgeColumns()),
+                timestamp + EDGES_EXTENSION,
+                conf
+        );
+
         sparkUtils.getSparkContext().close();
     }
 
@@ -68,27 +84,37 @@ public class KCore {
         GraphFrame currentGraph = graph;
 
         do {
-            Dataset<Row> degrees = currentGraph.degrees();
+            Dataset<Row> edges = currentGraph.edges();
 
-            Dataset<Row> filteredVertices = currentGraph.vertices()
-                    .join(degrees, currentGraph.vertices().col(GRAPHFRAMES_ID_COL).equalTo(degrees.col(GRAPHFRAMES_ID_COL)))
-                    .filter(GRAPHFRAMES_DEGREE_COL + " >= " + k);
+            Dataset<Row> degrees = edges
+                    .select(edges.col(GRAPHFRAMES_SRC_COL).as(GRAPHFRAMES_ID_COL))
+                    .union(edges.select(edges.col(GRAPHFRAMES_DST_COL).as(GRAPHFRAMES_ID_COL)))
+                    .groupBy(GRAPHFRAMES_ID_COL)
+                    .count()
+                    .withColumnRenamed(COUNT, GRAPHFRAMES_DEGREE_COL);
 
-            Dataset<Row> filteredEdges = currentGraph.edges()
-                    .join(filteredVertices, currentGraph.edges().col(GRAPHFRAMES_SRC_COL).equalTo(filteredVertices.col(GRAPHFRAMES_ID_COL)))
-                    .join(filteredVertices, currentGraph.edges().col(GRAPHFRAMES_DST_COL).equalTo(filteredVertices.col(GRAPHFRAMES_ID_COL)))
-                    .select(currentGraph.edges().col(GRAPHFRAMES_ALL_COLS));
+            Dataset<Row> verticesNoDegree = currentGraph.vertices().drop(GRAPHFRAMES_DEGREE_COL);
+
+            Dataset<Row> filteredVertices = verticesNoDegree
+                    .join(degrees, verticesNoDegree.col(GRAPHFRAMES_ID_COL).equalTo(degrees.col(GRAPHFRAMES_ID_COL)), INNER)
+                    .drop(degrees.col(GRAPHFRAMES_ID_COL))
+                    .filter(degrees.col(GRAPHFRAMES_DEGREE_COL).geq(k))
+                    .select(verticesNoDegree.col(GRAPHFRAMES_ID_COL), verticesNoDegree.col(VERTICES_NAME_COL));
+
+            Dataset<Row> srcIds = filteredVertices.select(filteredVertices.col(GRAPHFRAMES_ID_COL).alias(GRAPHFRAMES_SRC_ALIAS));
+            Dataset<Row> dstIds = filteredVertices.select(filteredVertices.col(GRAPHFRAMES_ID_COL).alias(GRAPHFRAMES_DST_ALIAS));
+
+            Dataset<Row> filteredEdges = edges
+                    .join(srcIds, edges.col(GRAPHFRAMES_SRC_COL).equalTo(srcIds.col(GRAPHFRAMES_SRC_ALIAS)), INNER)
+                    .join(dstIds, edges.col(GRAPHFRAMES_DST_COL).equalTo(dstIds.col(GRAPHFRAMES_DST_ALIAS)), INNER)
+                    .select(edges.col(GRAPHFRAMES_SRC_COL), edges.col(GRAPHFRAMES_DST_COL));
 
             GraphFrame newGraph = GraphFrame.apply(filteredVertices, filteredEdges);
 
             changed = newGraph.vertices().count() != currentGraph.vertices().count();
             currentGraph = newGraph;
-        } while (changed);
 
-        List<Row> result = currentGraph.vertices().collectAsList();
-        for (Row row : result) {
-            System.out.println(row);
-        }
+        } while (changed);
 
         return currentGraph;
     }

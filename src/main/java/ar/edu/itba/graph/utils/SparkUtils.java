@@ -1,6 +1,7 @@
 package ar.edu.itba.graph.utils;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkConf;
@@ -9,7 +10,12 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+
+import static ar.edu.itba.graph.utils.ErrorUtils.*;
 
 public class SparkUtils {
 
@@ -30,15 +36,15 @@ public class SparkUtils {
     public static void validatePath(Path path, Configuration conf) throws IOException {
         FileSystem fs = FileSystem.get(conf);
         if (path == null) {
-            throw new IllegalArgumentException("Path must not be null.");
+            throw new IllegalArgumentException(PATH_MUST_NOT_BE_NULL);
         }
 
         if (!fs.exists(path)) {
-            throw new IOException("Path does not exist: " + path);
+            throw new IOException(PATH_DOES_NOT_EXIST + path);
         }
 
         if (!fs.isFile(path)) {
-            throw new IOException("Path is not a file: " + path);
+            throw new IOException(PATH_IS_NOT_A_FILE + path);
         }
     }
 
@@ -47,6 +53,16 @@ public class SparkUtils {
                 .option("header", "true")
                 .option("inferSchema", "true")
                 .csv(path);
+    }
+
+    public static void writeCSV(String content, String path, Configuration conf) throws IOException {
+        Path p = new Path(path);
+        FileSystem fs = FileSystem.get(conf);
+        fs.delete(p);
+        try (FSDataOutputStream out = fs.create(p, true);
+             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+            writer.write(content);
+        }
     }
 
     public JavaSparkContext getSparkContext() {

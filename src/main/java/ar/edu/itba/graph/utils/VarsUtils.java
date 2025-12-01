@@ -10,5 +10,10 @@ public class VarsUtils {
     public static final String GRAPHFRAMES_DEGREE_COL = "degree";
     public static final String GRAPHFRAMES_SRC_COL = "src";
     public static final String GRAPHFRAMES_DST_COL = "dst";
-    public static final String GRAPHFRAMES_ALL_COLS = "*";
+    public static final String GRAPHFRAMES_SRC_ALIAS = "src_id";
+    public static final String GRAPHFRAMES_DST_ALIAS = "dst_id";
+    public static final String VERTICES_EXTENSION = "-vertices.csv";
+    public static final String EDGES_EXTENSION = "_edges.csv";
+    public static final String COUNT = "count";
+    public static final String INNER = "inner";
 }
