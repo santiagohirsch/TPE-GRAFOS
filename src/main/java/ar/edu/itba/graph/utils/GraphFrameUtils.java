@@ -7,6 +7,10 @@ import java.util.List;
 public class GraphFrameUtils {
 
     public static String graphToString(List<Row> rows, String[] columns) {
+        if (rows.isEmpty() || columns.length < 2) {
+            return "";
+        }
+
         StringBuilder sb = new StringBuilder();
 
         sb.append(columns[0])
