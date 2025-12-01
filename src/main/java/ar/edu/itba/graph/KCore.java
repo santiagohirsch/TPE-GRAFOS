@@ -66,16 +66,29 @@ public class KCore {
         Date now = new Date();
         String timestamp = String.valueOf(now.getTime());
 
+        String vertices = graphToString(result.vertices().orderBy(GRAPHFRAMES_ID_COL).collectAsList(), result.vertexColumns());
+        String edges = graphToString(result.edges().orderBy(GRAPHFRAMES_SRC_COL, GRAPHFRAMES_DST_COL).collectAsList(), result.edgeColumns());
+
         writeCSV(
-                graphToString(result.vertices().orderBy(GRAPHFRAMES_ID_COL).collectAsList(), result.vertexColumns()),
+                vertices,
                 timestamp + VERTICES_EXTENSION,
                 conf
         );
         writeCSV(
-                graphToString(result.edges().orderBy(GRAPHFRAMES_SRC_COL, GRAPHFRAMES_DST_COL).collectAsList(), result.edgeColumns()),
+                edges,
                 timestamp + EDGES_EXTENSION,
                 conf
         );
+
+        if (vertices.isEmpty() || edges.isEmpty()) {
+            System.out.println(EMPTY_K_CORE_MESSAGE);
+        } else {
+            System.out.println(K_CORE_COMPUTED_MESSAGE);
+            System.out.println(VERTICES_MESSAGE);
+            System.out.println(vertices);
+            System.out.println(EDGES_MESSAGE);
+            System.out.println(edges);
+        }
 
         sparkUtils.getSparkContext().close();
     }

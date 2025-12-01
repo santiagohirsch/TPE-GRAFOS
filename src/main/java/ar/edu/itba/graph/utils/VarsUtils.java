@@ -17,4 +17,8 @@ public class VarsUtils {
     public static final String EDGES_EXTENSION = "_edges.csv";
     public static final String COUNT = "count";
     public static final String INNER = "inner";
+    public static final String EMPTY_K_CORE_MESSAGE = "The k-core decomposition resulted in an empty graph.";
+    public static final String K_CORE_COMPUTED_MESSAGE = "K-core decomposition computed successfully.";
+    public static final String VERTICES_MESSAGE = "Vertices: ";
+    public static final String EDGES_MESSAGE = "Edges: ";
 }
