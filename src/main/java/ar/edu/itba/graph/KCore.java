@@ -96,20 +96,21 @@ public class KCore {
     private GraphFrame decomposition(GraphFrame graph, int k) {
         boolean changed;
         GraphFrame currentGraph = graph;
+        Dataset<Row> originalEdges = currentGraph.edges();
+        Dataset<Row> undirectedEdges =
+                originalEdges.select(
+                        when(originalEdges.col(GRAPHFRAMES_SRC_COL).lt(originalEdges.col(GRAPHFRAMES_DST_COL)), originalEdges.col(GRAPHFRAMES_SRC_COL)).otherwise(originalEdges.col(GRAPHFRAMES_DST_COL)).alias(GRAPHFRAMES_SRC_COL),
+                        when(originalEdges.col(GRAPHFRAMES_SRC_COL).lt(originalEdges.col(GRAPHFRAMES_DST_COL)), originalEdges.col(GRAPHFRAMES_DST_COL)).otherwise(originalEdges.col(GRAPHFRAMES_SRC_COL)).alias(GRAPHFRAMES_DST_COL)
+                ).distinct();
+        currentGraph = GraphFrame.apply(currentGraph.vertices(), undirectedEdges);
 
         do {
             Dataset<Row> edges = currentGraph.edges();
 
-            Dataset<Row> undirectedEdges =
-                    edges.select(
-                            when(edges.col(GRAPHFRAMES_SRC_COL).lt(edges.col(GRAPHFRAMES_DST_COL)), edges.col(GRAPHFRAMES_SRC_COL)).otherwise(edges.col(GRAPHFRAMES_DST_COL)).alias(GRAPHFRAMES_SRC_COL),
-                            when(edges.col(GRAPHFRAMES_SRC_COL).lt(edges.col(GRAPHFRAMES_DST_COL)), edges.col(GRAPHFRAMES_DST_COL)).otherwise(edges.col(GRAPHFRAMES_SRC_COL)).alias(GRAPHFRAMES_DST_COL)
-                    ).distinct();
-
             Dataset<Row> neighbors =
-                    undirectedEdges.select(undirectedEdges.col(GRAPHFRAMES_SRC_COL).as(GRAPHFRAMES_ID_COL), undirectedEdges.col(GRAPHFRAMES_DST_COL).as(GRAPHFRAMES_NEIGHBOR_COL))
+                    edges.select(edges.col(GRAPHFRAMES_SRC_COL).as(GRAPHFRAMES_ID_COL), edges.col(GRAPHFRAMES_DST_COL).as(GRAPHFRAMES_NEIGHBOR_COL))
                             .union(
-                                    undirectedEdges.select(undirectedEdges.col(GRAPHFRAMES_DST_COL).as(GRAPHFRAMES_ID_COL), undirectedEdges.col(GRAPHFRAMES_SRC_COL).as(GRAPHFRAMES_NEIGHBOR_COL))
+                                    edges.select(edges.col(GRAPHFRAMES_DST_COL).as(GRAPHFRAMES_ID_COL), edges.col(GRAPHFRAMES_SRC_COL).as(GRAPHFRAMES_NEIGHBOR_COL))
                             );
 
             Dataset<Row> degrees =
